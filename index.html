@@ -1,43 +1,4 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -45,6 +6,7 @@
     <title>Image Voting</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" href="data:,">
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
     <div class="bg-white p-6 rounded-lg shadow-lg max-w-md w-full text-center">
@@ -65,85 +27,90 @@
     </div>
 
     <script>
-        // Initialize Supabase client
-        const supabase = supabase.createClient('https://hvimbgzyjvcefcrqwsoo.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2aW1iZ3p5anZjZWZjcnF3c29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyNTk5NDEsImV4cCI6MjA2MTgzNTk0MX0.7K2Ejpm2zzAW0IG_xK37Nqc9TVViB_Eflr9hw1MjrG0');
+        // Check if Supabase is loaded
+        if (typeof supabase === 'undefined') {
+            console.error('Supabase library not loaded. Please check the CDN link.');
+        } else {
+            // Initialize Supabase client
+            const supabaseClient = supabase.createClient('https://hvimbgzyjvcefcrqwsoo.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2aW1iZ3p5anZjZWZjcnF3c29vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyNTk5NDEsImV4cCI6MjA2MTgzNTk0MX0.7K2Ejpm2zzAW0IG_xK37Nqc9TVViB_Eflr9hw1MjrG0');
 
-        // List of 3 image URLs from Cloudinary
-        const images = [
-            'https://res.cloudinary.com/dczbdtglm/image/upload/v1746261474/IMG_2885_ax5hoa.jpg',
-            'https://res.cloudinary.com/dczbdtglm/image/upload/v1746261436/IMG_2883_xkcoue.jpg',
-            'https://res.cloudinary.com/dczbdtglm/image/upload/v1746261436/IMG_2881_ibtr3f.jpg'
-        ];
+            // List of 3 image URLs from Cloudinary
+            const images = [
+                'https://res.cloudinary.com/dczbdtglm/image/upload/v1746261474/IMG_2885_ax5hoa.jpg',
+                'https://res.cloudinary.com/dczbdtglm/image/upload/v1746261436/IMG_2883_xkcoue.jpg',
+                'https://res.cloudinary.com/dczbdtglm/image/upload/v1746261436/IMG_2881_ibtr3f.jpg'
+            ];
 
-        // Initialize database with all images
-        async function initializeDatabase() {
-            for (const image of images) {
-                const { data, error } = await supabase
-                    .from('votes')
-                    .select('image_url')
-                    .eq('image_url', image);
-                if (error) console.error('Error checking image:', error);
-                if (!data || data.length === 0) {
-                    await supabase
+            // Initialize database with all images
+            async function initializeDatabase() {
+                for (const image of images) {
+                    const { data, error } = await supabaseClient
                         .from('votes')
-                        .insert({ image_url: image, category_a: 0, category_b: 0, category_c: 0 });
+                        .select('image_url')
+                        .eq('image_url', image);
+                    if (error) console.error('Error checking image:', error);
+                    if (!data || data.length === 0) {
+                        await supabaseClient
+                            .from('votes')
+                            .insert({ image_url: image, category_a: 0, category_b: 0, category_c: 0 });
+                    }
                 }
             }
-        }
 
-        // Load a random image
-        function loadNewImage() {
-            const randomImage = images[Math.floor(Math.random() * images.length)];
-            document.getElementById('randomImage').src = randomImage;
-            document.getElementById('results').classList.add('hidden');
-        }
-
-        // Handle voting
-        async function vote(category) {
-            const currentImage = document.getElementById('randomImage').src;
-            const { data, error } = await supabase
-                .from('votes')
-                .select(category)
-                .eq('image_url', currentImage)
-                .single();
-            if (error) {
-                console.error('Error fetching votes:', error);
-                return;
+            // Load a random image
+            function loadNewImage() {
+                const randomImage = images[Math.floor(Math.random() * images.length)];
+                document.getElementById('randomImage').src = randomImage;
+                document.getElementById('results').classList.add('hidden');
             }
-            const newVoteCount = data[category] + 1;
-            const { error: updateError } = await supabase
-                .from('votes')
-                .update({ [category]: newVoteCount })
-                .eq('image_url', currentImage);
-            if (updateError) {
-                console.error('Error updating votes:', updateError);
-                return;
-            }
-            showResults(currentImage);
-        }
 
-        // Show voting results
-        async function showResults(image) {
-            const { data, error } = await supabase
-                .from('votes')
-                .select('category_a, category_b, category_c')
-                .eq('image_url', image)
-                .single();
-            if (error) {
-                console.error('Error fetching results:', error);
-                return;
+            // Handle voting
+            async function vote(category) {
+                const currentImage = document.getElementById('randomImage').src;
+                const { data, error } = await supabaseClient
+                    .from('votes')
+                    .select(category)
+                    .eq('image_url', currentImage)
+                    .single();
+                if (error) {
+                    console.error('Error fetching votes:', error);
+                    return;
+                }
+                const newVoteCount = data[category] + 1;
+                const { error: updateError } = await supabaseClient
+                    .from('votes')
+                    .update({ [category]: newVoteCount })
+                    .eq('image_url', currentImage);
+                if (updateError) {
+                    console.error('Error updating votes:', updateError);
+                    return;
+                }
+                showResults(currentImage);
             }
-            document.getElementById('resultA').textContent = `Category A: ${data.category_a} votes`;
-            document.getElementById('resultB').textContent = `Category B: ${data.category_b} votes`;
-            document.getElementById('resultC').textContent = `Category C: ${data.category_c} votes`;
-            document.getElementById('results').classList.remove('hidden');
-        }
 
-        // Initialize
-        (async () => {
-            await initializeDatabase();
-            loadNewImage();
-        })();
+            // Show voting results
+            async function showResults(image) {
+                const { data, error } = await supabaseClient
+                    .from('votes')
+                    .select('category_a, category_b, category_c')
+                    .eq('image_url', image)
+                    .single();
+                if (error) {
+                    console.error('Error fetching results:', error);
+                    return;
+                }
+                document.getElementById('resultA').textContent = `Category A: ${data.category_a} votes`;
+                document.getElementById('resultB').textContent = `Category B: ${data.category_b} votes`;
+                document.getElementById('resultC').textContent = `Category C: ${data.category_c} votes`;
+                document.getElementById('results').classList.remove('hidden');
+            }
+
+            // Initialize
+            (async () => {
+                await initializeDatabase();
+                loadNewImage();
+            })();
+        }
     </script>
 </body>
 </html>
