@@ -1,0 +1,80 @@
+/* Dodatečné styly pro aplikaci */
+
+/* Pozadí stránky s barvou Ostravy */
+body {
+    background-color: #f0f3f7;
+    background-image: linear-gradient(to bottom, #e0e5eb, #f0f3f7);
+}
+
+/* Animace pro notifikace */
+@keyframes slideIn {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.3s forwards;
+}
+
+.slide-out {
+    animation: slideOut 0.3s forwards;
+}
+
+/* Efekt přechodu mezi obrázky */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Efekt tlačítek */
+button:active {
+    transform: scale(0.98);
+}
+
+/* Optimalizace zobrazení obrázků */
+#currentImage {
+    transition: all 0.3s ease;
+    max-height: 70vh;
+    width: auto;
+    margin: 0 auto;
+    display: block;
+}
+
+/* Styly pro hlasovací tlačítka */
+.vote-button {
+    flex: 1;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 12px 16px;
+    border-radius: 0.5rem;
+    color: white;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    white-space: normal;
+    line-height: 1.3;
+    font-size: 1rem;
+}
